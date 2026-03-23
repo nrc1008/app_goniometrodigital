@@ -16,5 +16,7 @@ El cálculo del TAM y la clasificación funcional (Excelente, Bueno, Regular, Ma
 2. Marca los 5 puntos anatómicos siguiendo la guía visual.
 3. Genera el reporte y descarga el informe clínico.
 
+🔗: https://appgoniometrodigital-htkkutpb9jjqwynvtpjfhw.streamlit.app
+
 ---
 **Desarrollado por: Niamey Rey**
