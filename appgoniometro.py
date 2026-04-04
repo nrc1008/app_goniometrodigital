@@ -87,7 +87,7 @@ with st.sidebar:
             if key in st.session_state: del st.session_state[key]
         st.rerun()
 
-# 5. EJECUCIÓN POR FASES 
+# 4. EJECUCIÓN POR FASES 
 if fase == "Extensión":
     if fase_analisis_foto("Evaluación de Extensión", "puntos_ext", "red", "img_ext_cache"):
         if st.button("Siguiente: Evaluación de Flexión ➡️", use_container_width=True):
@@ -163,14 +163,12 @@ elif fase == "Reporte Final":
                         writer.writerow(["Fecha", "ID", "Dedo", "E_MCF", "E_IFP", "E_IFD", "F_MCF", "F_IFP", "F_IFD", "TAM", "Diag"])
                     writer.writerow([datetime.now().strftime("%d/%m/%Y %H:%M"), paciente, dedo_opcion, *ang_e, *ang_f, tam_total, diag])
                 
-                # 2. Construcción del PDF (A4) - Coordenadas Reajustadas
+                # 2. Construcción del PDF (A4)
                 fig_pdf = plt.figure(figsize=(8.27, 11.69))
                 
-                # Títulos (Parte Superior: 0.96 - 0.90)
                 fig_pdf.text(0.5, 0.96, "INFORME CINEMÁTICO: DigitROM Analysis", ha='center', fontsize=16, fontweight='bold')
                 fig_pdf.text(0.5, 0.93, f"ID Paciente: {paciente} | Dedo: {dedo_opcion} | Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ha='center', fontsize=11)
 
-                # Imágenes (Bloque Superior: 0.68 - 0.88)
                 ax_img1 = fig_pdf.add_axes([0.1, 0.68, 0.38, 0.20])
                 ax_img1.imshow(st.session_state.img_ext_cache)
                 ax_img1.plot(ex, ey, 'o-', color='red', linewidth=2)
@@ -183,7 +181,6 @@ elif fase == "Reporte Final":
                 ax_img2.set_title("Flexión Máxima", fontsize=10, fontweight='bold')
                 ax_img2.axis('off')
 
-                # Gráfica (Bloque Central: 0.42 - 0.62)
                 ax_graph = fig_pdf.add_axes([0.15, 0.44, 0.7, 0.16])
                 arcos_reales = [round(ang_f[i] - ang_e[i], 1) for i in range(3)]
                 labels = ["MCF", "IFP", "IFD"]
@@ -197,7 +194,6 @@ elif fase == "Reporte Final":
                 ax_graph.spines['top'].set_visible(False)
                 ax_graph.spines['right'].set_visible(False)
 
-                # Tabla de Datos (Bloque Inferior: 0.22 - 0.40)
                 txt_tabla = (
                     f"{'='*62}\n"
                     f"ARTIC.    FLEXIÓN    DÉFICIT EXT.    ARCO ÚTIL    REF. AAOS\n"
@@ -210,16 +206,13 @@ elif fase == "Reporte Final":
                 )
                 fig_pdf.text(0.1, 0.40, txt_tabla, family='monospace', fontsize=10, verticalalignment='top')
 
-                # Observaciones y Firma (Pie de Página: 0.05 - 0.18)
                 fig_pdf.text(0.1, 0.18, "OBSERVACIONES CLÍNICAS / PLAN TERAPÉUTICO:", fontsize=10, fontweight='bold')
-                # Líneas de escritura manual
                 for i in range(3):
                     fig_pdf.text(0.1, 0.15 - (i*0.02), "_"*95, color='gray', fontsize=8)
                 
                 fig_pdf.text(0.65, 0.08, "Firma y Sello:", fontsize=10, fontweight='bold')
                 fig_pdf.text(0.65, 0.04, "."*35, color='black')
 
-                # Nota al pie
                 fig_pdf.text(0.5, 0.02, "Documento generado digitalmente por DigitROM Analysis - HUBU / UBU", ha='center', fontsize=7, color='gray')
 
                 # Guardado final
