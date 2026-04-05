@@ -223,3 +223,6 @@ elif fase == "Reporte Final":
                 
                 st.success(f"✅ Informe profesional guardado en: {folder}")
                 st.download_button("📥 Descargar PDF Final", open(pdf_path, "rb"), file_name=pdf_name)
+
+                with open(csv_path, "rb") as file:
+                    st.download_button("📊 Descargar Base de Datos (CSV) del Paciente", file, file_name=f"Historial_{p_f}.csv", mime="text/csv")
