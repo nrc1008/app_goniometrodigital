@@ -109,7 +109,7 @@ elif fase == "Reporte Final":
         es_meñique = "5" in dedo_opcion
         ref_flex = [90, 100, 80] if not es_meñique else [100, 110, 90]
         tam_total = round(sum(ang_f) - sum(ang_e), 2)
-        diag = "EXCELENTE" if tam_total >= 220 else "BUENO" if tam_total >= 180 else "REGULAR / MALO"
+        clas = "EXCELENTE" if tam_total >= 220 else "BUENO" if tam_total >= 180 else "REGULAR / MALO"
 
         st.subheader("📊 Informe de Movilidad Articular")
         col_datos, col_fotos = st.columns([1.6, 2])
@@ -131,7 +131,7 @@ elif fase == "Reporte Final":
             st.markdown("---")
             m1, m2 = st.columns(2)
             m1.metric("TAM Actual", f"{tam_total}°")
-            m2.metric("Clasificación", diag)
+            m2.metric("Clasificación", clas)
 
         with col_fotos:
             ca, cb = st.columns(2)
@@ -158,12 +158,11 @@ elif fase == "Reporte Final":
                     with open(csv_path, 'a', newline='', encoding='utf-8-sig') as f:
                         writer = csv.writer(f, delimiter=';')
                         if not existe:
-                            writer.writerow(["Fecha", "ID", "Dedo", "E_MCF", "E_IFP", "E_IFD", "F_MCF", "F_IFP", "F_IFD", "TAM", "Diag"])
-                        writer.writerow([datetime.now().strftime("%d/%m/%Y %H:%M"), paciente, dedo_opcion, *ang_e, *ang_f, tam_total, diag])
+                            writer.writerow(["Fecha", "ID", "Dedo", "E_MCF", "E_IFP", "E_IFD", "F_MCF", "F_IFP", "F_IFD", "TAM", "Clas"])
+                        writer.writerow([datetime.now().strftime("%d/%m/%Y %H:%M"), paciente, dedo_opcion, *ang_e, *ang_f, tam_total, clas])
                     
                     pdf_name = f"Informe_{p_f}_{datetime.now().strftime('%H%M%S')}.pdf"
                     pdf_path = os.path.join(folder, pdf_name)
-                    # (Aquí iría tu código del fig_pdf, por brevedad lo resumo, pero mantén el tuyo)
                     plt.savefig(pdf_path, format='pdf', dpi=300)
                     
                     st.session_state['ultimo_guardado'] = id_actual
