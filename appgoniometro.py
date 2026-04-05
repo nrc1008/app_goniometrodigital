@@ -226,3 +226,14 @@ elif fase == "Reporte Final":
 
                 with open(csv_path, "rb") as file:
                     st.download_button("📊 Descargar Base de Datos (CSV) del Paciente", file, file_name=f"Historial_{p_f}.csv", mime="text/csv")
+
+                st.markdown("---")
+                st.markdown("### 🗂️ Historial Evolutivo del Paciente")
+                st.info("El sistema automatiza la creación de carpetas y actualiza la base de datos para comparar la evolución clínica (Pre/Post).")
+                
+                try:
+                    import pandas as pd
+                    df_historial = pd.read_csv(csv_path, sep=';')
+                    st.dataframe(df_historial, use_container_width=True)
+                except Exception as e:
+                    st.error("No se pudo cargar el historial en pantalla.")
