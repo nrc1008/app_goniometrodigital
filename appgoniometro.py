@@ -102,7 +102,8 @@ elif fase == "Flexión":
 
 elif fase == "Reporte Final":
     if len(st.session_state.puntos_ext) == 5 and len(st.session_state.puntos_flex) == 5:
-        pts_e, pts_f = [np.array(p) for p in st.session_state.puntos_ext], [np.array(p) for p in st.session_state.puntos_flex]
+        pts_e = [np.array(p) for p in st.session_state.puntos_ext]
+        pts_f = [np.array(p) for p in st.session_state.puntos_flex]
         ang_e = [calcular_angulo_clinico(pts_e[i], pts_e[i+1], pts_e[i+2]) for i in range(3)]
         ang_f = [calcular_angulo_clinico(pts_f[i], pts_f[i+1], pts_f[i+2]) for i in range(3)]
         
@@ -112,50 +113,17 @@ elif fase == "Reporte Final":
         diag = "EXCELENTE" if tam_total >= 220 else "BUENO" if tam_total >= 180 else "REGULAR / MALO"
 
         st.subheader("📊 Informe de Movilidad Articular")
-        col_datos, col_fotos = st.columns([1.6, 2])
         
-        with col_datos:
-            st.write("#### Balance Articular y ROM Activo")
-            arts = ["MCF", "IFP", "IFD"]
-            for i in range(3):
-                arco_real = round(ang_f[i] - ang_e[i], 1)
-                def_flex = round(ref_flex[i] - ang_f[i], 1)
-                st.markdown(f"**{arts[i]} | ROM Activo: {arco_real}°**")
-                st.progress(min(1.0, max(0.0, arco_real / ref_flex[i])))
-                c1, c2 = st.columns(2)
-                with c1: st.caption(f"Flexión lograda: {ang_f[i]}°\n\nDéficit extensión: {ang_e[i]}°")
-                with c2:
-                    if def_flex > 0: st.caption(f"Déficit flexión: {def_flex}°\n\nReferencia AAOS: {ref_flex[i]}°")
-                    else: st.caption(f"Hipermovilidad: +{abs(def_flex)}°\n\nReferencia AAOS: {ref_flex[i]}°")
-                st.write("")
+        p_f = paciente.title().replace(' ', '_') if paciente else "Anonimo"
+        folder = os.path.join("Pacientes", p_f)
+        csv_path = os.path.join(folder, f"Historial_{p_f}.csv")
 
-            st.markdown("---")
-            m1, m2 = st.columns(2)
-            m1.metric("TAM Actual", f"{tam_total}°", 
-                      help=r"TAM = (\sum Flexión) - (\sum Déficit Extensión)")
-            m2.metric("Clasificación", diag, 
-                      help="Escala Strickland: Excelente (>220°), Bueno (180-220°), Regular (<180°)")
-
-        with col_fotos:
-            ca, cb = st.columns(2)
-            with ca:
-                fig_e, ax_e = plt.subplots(); ax_e.imshow(st.session_state.img_ext_cache)
-                ex, ey = zip(*st.session_state.puntos_ext); ax_e.plot(ex, ey, 'o-', color='red', linewidth=2); ax_e.axis('off'); st.pyplot(fig_e)
-            with cb:
-                fig_f, ax_f = plt.subplots(); ax_f.imshow(st.session_state.img_flex_cache)
-                fx, fy = zip(*st.session_state.puntos_flex); ax_f.plot(fx, fy, 'o-', color='blue', linewidth=2); ax_f.axis('off'); st.pyplot(fig_f)
-
-       
-        if st.button("💾 Guardar Informe y Generar PDF", use_container_width=True):
+        if st.button("💾 Registrar Evaluación y Generar Documentos", use_container_width=True):
             if not paciente:
                 st.error("⚠️ Error: Debe introducir un ID de Paciente.")
             else:
-                p_f = paciente.title().replace(' ', '_')
-                folder = os.path.join("Pacientes", p_f)
                 if not os.path.exists(folder): os.makedirs(folder)
                 
-                # 1. Registro en CSV
-                csv_path = os.path.join(folder, f"Historial_{p_f}.csv")
                 existe = os.path.isfile(csv_path)
                 with open(csv_path, 'a', newline='', encoding='utf-8-sig') as f:
                     writer = csv.writer(f, delimiter=';')
@@ -163,77 +131,56 @@ elif fase == "Reporte Final":
                         writer.writerow(["Fecha", "ID", "Dedo", "E_MCF", "E_IFP", "E_IFD", "F_MCF", "F_IFP", "F_IFD", "TAM", "Diag"])
                     writer.writerow([datetime.now().strftime("%d/%m/%Y %H:%M"), paciente, dedo_opcion, *ang_e, *ang_f, tam_total, diag])
                 
-                # 2. Construcción del PDF (A4)
                 fig_pdf = plt.figure(figsize=(8.27, 11.69))
-                
                 fig_pdf.text(0.5, 0.96, "INFORME CINEMÁTICO: DigitROM Analysis", ha='center', fontsize=16, fontweight='bold')
                 fig_pdf.text(0.5, 0.93, f"ID Paciente: {paciente} | Dedo: {dedo_opcion} | Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ha='center', fontsize=11)
 
-                ax_img1 = fig_pdf.add_axes([0.1, 0.68, 0.38, 0.20])
-                ax_img1.imshow(st.session_state.img_ext_cache)
-                ax_img1.plot(ex, ey, 'o-', color='red', linewidth=2)
-                ax_img1.set_title("Extensión", fontsize=10, fontweight='bold')
-                ax_img1.axis('off')
-
-                ax_img2 = fig_pdf.add_axes([0.52, 0.68, 0.38, 0.20])
-                ax_img2.imshow(st.session_state.img_flex_cache)
-                ax_img2.plot(fx, fy, 'o-', color='blue', linewidth=2)
-                ax_img2.set_title("Flexión Máxima", fontsize=10, fontweight='bold')
-                ax_img2.axis('off')
-
-                ax_graph = fig_pdf.add_axes([0.15, 0.44, 0.7, 0.16])
-                arcos_reales = [round(ang_f[i] - ang_e[i], 1) for i in range(3)]
-                labels = ["MCF", "IFP", "IFD"]
-                x = np.arange(len(labels))
-                ax_graph.bar(x - 0.17, arcos_reales, 0.35, label='Paciente (Arco Útil)', color='#1f77b4')
-                ax_graph.bar(x + 0.17, ref_flex, 0.35, label='Normalidad (AAOS)', color='#d3d3d3')
-                ax_graph.set_ylabel('Grados (°)')
-                ax_graph.set_xticks(x)
-                ax_graph.set_xticklabels(labels)
-                ax_graph.legend(fontsize=8, loc='upper right')
-                ax_graph.spines['top'].set_visible(False)
-                ax_graph.spines['right'].set_visible(False)
-
-                txt_tabla = (
-                    f"{'='*62}\n"
-                    f"ARTIC.    FLEXIÓN    DÉFICIT EXT.    ARCO ÚTIL    REF. AAOS\n"
-                    f"{'-'*62}\n"
-                    f"MCF       {ang_f[0]:>6}°    {ang_e[0]:>11}°    {arcos_reales[0]:>9}°    {ref_flex[0]:>8}°\n"
-                    f"IFP       {ang_f[1]:>6}°    {ang_e[1]:>11}°    {arcos_reales[1]:>9}°    {ref_flex[1]:>8}°\n"
-                    f"IFD       {ang_f[2]:>6}°    {ang_e[2]:>11}°    {arcos_reales[2]:>9}°    {ref_flex[2]:>8}°\n"
-                    f"{'='*62}\n\n"
-                    f"TOTAL ACTIVE MOTION (TAM): {tam_total}° | ESCALA: {diag}"
-                )
-                fig_pdf.text(0.1, 0.40, txt_tabla, family='monospace', fontsize=10, verticalalignment='top')
-
-                fig_pdf.text(0.1, 0.18, "OBSERVACIONES CLÍNICAS / PLAN TERAPÉUTICO:", fontsize=10, fontweight='bold')
-                for i in range(3):
-                    fig_pdf.text(0.1, 0.15 - (i*0.02), "_"*95, color='gray', fontsize=8)
+                ex, ey = zip(*st.session_state.puntos_ext)
+                fx, fy = zip(*st.session_state.puntos_flex)
                 
-                fig_pdf.text(0.65, 0.08, "Firma y Sello:", fontsize=10, fontweight='bold')
-                fig_pdf.text(0.65, 0.04, "."*35, color='black')
+                ax1 = fig_pdf.add_axes([0.1, 0.68, 0.38, 0.20])
+                ax1.imshow(st.session_state.img_ext_cache); ax1.plot(ex, ey, 'o-', color='red'); ax1.axis('off')
+                
+                ax2 = fig_pdf.add_axes([0.52, 0.68, 0.38, 0.20])
+                ax2.imshow(st.session_state.img_flex_cache); ax2.plot(fx, fy, 'o-', color='blue'); ax2.axis('off')
 
-                fig_pdf.text(0.5, 0.02, "Documento generado digitalmente por DigitROM Analysis - HUBU / UBU", ha='center', fontsize=7, color='gray')
+                ax_g = fig_pdf.add_axes([0.15, 0.44, 0.7, 0.16])
+                arcos = [round(ang_f[i] - ang_e[i], 1) for i in range(3)]
+                x = np.arange(3)
+                ax_g.bar(x - 0.17, arcos, 0.35, label='Paciente', color='#1f77b4')
+                ax_g.bar(x + 0.17, ref_flex, 0.35, label='Normalidad', color='#d3d3d3')
+                ax_g.set_xticks(x); ax_g.set_xticklabels(["MCF", "IFP", "IFD"]); ax_g.legend()
 
-                # Guardado final
+                txt = f"TAM TOTAL: {tam_total}° | CLASIFICACIÓN: {diag}"
+                fig_pdf.text(0.1, 0.35, txt, fontsize=12, fontweight='bold')
+
                 pdf_name = f"Informe_{p_f}_{datetime.now().strftime('%H%M%S')}.pdf"
                 pdf_path = os.path.join(folder, pdf_name)
                 plt.savefig(pdf_path, format='pdf', dpi=300)
                 plt.close(fig_pdf)
-                
-                st.success(f"✅ Informe profesional guardado en: {folder}")
-                st.download_button("📥 Descargar PDF Final", open(pdf_path, "rb"), file_name=pdf_name)
 
-                with open(csv_path, "rb") as file:
-                    st.download_button("📊 Descargar Base de Datos (CSV) del Paciente", file, file_name=f"Historial_{p_f}.csv", mime="text/csv")
+                st.session_state['guardado_finalizado'] = True
+                st.session_state['ruta_pdf_generado'] = pdf_path
+                st.session_state['ruta_csv_generado'] = csv_path
+                st.success("✅ Datos registrados correctamente.")
 
-                st.markdown("---")
-                st.markdown("### 🗂️ Historial Evolutivo del Paciente")
-                st.info("El sistema automatiza la creación de carpetas y actualiza la base de datos para comparar la evolución clínica (Pre/Post).")
-                
-                try:
-                    import pandas as pd
-                    df_historial = pd.read_csv(csv_path, sep=';')
-                    st.dataframe(df_historial, use_container_width=True)
-                except Exception as e:
-                    st.error("No se pudo cargar el historial en pantalla.")
+        if st.session_state.get('guardado_finalizado'):
+            c1, c2 = st.columns(2)
+            with c1:
+                with open(st.session_state['ruta_pdf_generado'], "rb") as f:
+                    st.download_button("📥 Descargar PDF Final", f, file_name=os.path.basename(st.session_state['ruta_pdf_generado']))
+            with c2:
+                with open(st.session_state['ruta_csv_generado'], "rb") as f:
+                    st.download_button("📊 Descargar Historial CSV", f, file_name=f"Historial_{p_f}.csv")
+
+            st.markdown("---")
+            st.markdown("### 🗂️ Historial Evolutivo (Pre/Post)")
+            try:
+                import pandas as pd
+                df = pd.read_csv(st.session_state['ruta_csv_generado'], sep=';')
+                st.dataframe(df, use_container_width=True)
+            except:
+                st.error("Error al cargar la tabla de evolución.")
+
+    else:
+        st.warning("⚠️ Evaluación incompleta. Asegúrese de marcar los 5 puntos en Extensión y Flexión.")
